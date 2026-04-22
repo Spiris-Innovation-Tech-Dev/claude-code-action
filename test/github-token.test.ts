@@ -8,7 +8,6 @@ import {
 describe("github token setup", () => {
   let originalEnv: typeof process.env;
   const workflowValidationErrorResponse = {
-    message: "Workflow missing from current branch",
     error: {
       message: "Workflow missing from current branch",
       details: {
@@ -48,12 +47,14 @@ describe("github token setup", () => {
     );
     const setSecretSpy = spyOn(core, "setSecret").mockImplementation(() => {});
     const warningSpy = spyOn(core, "warning").mockImplementation(() => {});
-    const fetchSpy = spyOn(global, "fetch").mockImplementation((() => {
-      return new Response(JSON.stringify({ token: "app-token" }), {
+    const successFetchImpl: any = () =>
+      new Response(JSON.stringify({ token: "app-token" }), {
         status: 200,
         statusText: "OK",
       });
-    }) as any);
+    const fetchSpy = spyOn(global, "fetch").mockImplementation(
+      successFetchImpl,
+    );
 
     try {
       await expect(setupGitHubToken()).resolves.toBe("app-token");
@@ -75,12 +76,14 @@ describe("github token setup", () => {
     );
     const setSecretSpy = spyOn(core, "setSecret").mockImplementation(() => {});
     const warningSpy = spyOn(core, "warning").mockImplementation(() => {});
-    const fetchSpy = spyOn(global, "fetch").mockImplementation((() => {
-      return new Response(JSON.stringify(workflowValidationErrorResponse), {
+    const failureFetchImpl: any = () =>
+      new Response(JSON.stringify(workflowValidationErrorResponse), {
         status: 400,
         statusText: "Bad Request",
       });
-    }) as any);
+    const fetchSpy = spyOn(global, "fetch").mockImplementation(
+      failureFetchImpl,
+    );
     // Execute retry waits immediately so the test stays fast while still
     // verifying that setupGitHubToken retries and ultimately throws.
     const setTimeoutSpy = spyOn(global, "setTimeout").mockImplementation(((
