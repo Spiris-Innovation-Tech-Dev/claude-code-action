@@ -38,6 +38,37 @@ describe("github token setup", () => {
     });
   });
 
+  test("parseAdditionalPermissions returns undefined when unset", () => {
+    expect(parseAdditionalPermissions()).toBeUndefined();
+  });
+
+  test("setupGitHubToken exchanges the OIDC token successfully", async () => {
+    const getIdTokenSpy = spyOn(core, "getIDToken").mockResolvedValue(
+      "oidc-token",
+    );
+    const setSecretSpy = spyOn(core, "setSecret").mockImplementation(() => {});
+    const warningSpy = spyOn(core, "warning").mockImplementation(() => {});
+    const fetchSpy = spyOn(global, "fetch").mockImplementation((async () => {
+      return new Response(JSON.stringify({ token: "app-token" }), {
+        status: 200,
+        statusText: "OK",
+      });
+    }) as any);
+
+    try {
+      await expect(setupGitHubToken()).resolves.toBe("app-token");
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(setSecretSpy).toHaveBeenCalledWith("app-token");
+      expect(warningSpy).not.toHaveBeenCalled();
+    } finally {
+      getIdTokenSpy.mockRestore();
+      setSecretSpy.mockRestore();
+      warningSpy.mockRestore();
+      fetchSpy.mockRestore();
+    }
+  });
+
   test("setupGitHubToken throws on workflow_not_found_on_default_branch", async () => {
     const getIdTokenSpy = spyOn(core, "getIDToken").mockResolvedValue(
       "oidc-token",
