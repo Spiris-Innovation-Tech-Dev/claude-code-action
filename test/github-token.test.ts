@@ -7,6 +7,15 @@ import {
 
 describe("github token setup", () => {
   let originalEnv: typeof process.env;
+  const workflowValidationErrorResponse = {
+    message: "Workflow missing from current branch",
+    error: {
+      message: "Workflow missing from current branch",
+      details: {
+        error_code: "workflow_not_found_on_default_branch",
+      },
+    },
+  };
 
   beforeEach(() => {
     originalEnv = { ...process.env };
@@ -29,26 +38,20 @@ describe("github token setup", () => {
     });
   });
 
-  test("setupGitHubToken does not skip workflow validation mismatches", async () => {
+  test("setupGitHubToken throws on workflow_not_found_on_default_branch", async () => {
     const getIdTokenSpy = spyOn(core, "getIDToken").mockResolvedValue(
       "oidc-token",
     );
     const setSecretSpy = spyOn(core, "setSecret").mockImplementation(() => {});
     const warningSpy = spyOn(core, "warning").mockImplementation(() => {});
     const fetchSpy = spyOn(global, "fetch").mockImplementation((async () => {
-      return new Response(
-        JSON.stringify({
-          message: "Workflow missing from current branch",
-          error: {
-            message: "Workflow missing from current branch",
-            details: {
-              error_code: "workflow_not_found_on_default_branch",
-            },
-          },
-        }),
-        { status: 400, statusText: "Bad Request" },
-      );
+      return new Response(JSON.stringify(workflowValidationErrorResponse), {
+        status: 400,
+        statusText: "Bad Request",
+      });
     }) as any);
+    // Execute retry waits immediately so the test stays fast while still
+    // verifying that setupGitHubToken retries and ultimately throws.
     const setTimeoutSpy = spyOn(global, "setTimeout").mockImplementation(((
       callback: any,
     ) => {
