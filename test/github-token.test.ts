@@ -48,7 +48,7 @@ describe("github token setup", () => {
     );
     const setSecretSpy = spyOn(core, "setSecret").mockImplementation(() => {});
     const warningSpy = spyOn(core, "warning").mockImplementation(() => {});
-    const fetchSpy = spyOn(global, "fetch").mockImplementation((async () => {
+    const fetchSpy = spyOn(global, "fetch").mockImplementation((() => {
       return new Response(JSON.stringify({ token: "app-token" }), {
         status: 200,
         statusText: "OK",
@@ -75,7 +75,7 @@ describe("github token setup", () => {
     );
     const setSecretSpy = spyOn(core, "setSecret").mockImplementation(() => {});
     const warningSpy = spyOn(core, "warning").mockImplementation(() => {});
-    const fetchSpy = spyOn(global, "fetch").mockImplementation((async () => {
+    const fetchSpy = spyOn(global, "fetch").mockImplementation((() => {
       return new Response(JSON.stringify(workflowValidationErrorResponse), {
         status: 400,
         statusText: "Bad Request",
