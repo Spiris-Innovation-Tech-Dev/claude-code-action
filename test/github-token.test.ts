@@ -35,8 +35,8 @@ describe("github token setup", () => {
     );
     const setSecretSpy = spyOn(core, "setSecret").mockImplementation(() => {});
     const warningSpy = spyOn(core, "warning").mockImplementation(() => {});
-    const fetchSpy = spyOn(global, "fetch").mockResolvedValue(
-      new Response(
+    const fetchSpy = spyOn(global, "fetch").mockImplementation((async () => {
+      return new Response(
         JSON.stringify({
           message: "Workflow missing from current branch",
           error: {
@@ -47,16 +47,16 @@ describe("github token setup", () => {
           },
         }),
         { status: 400, statusText: "Bad Request" },
-      ),
-    );
-    const setTimeoutSpy = spyOn(global, "setTimeout").mockImplementation(
-      ((callback: any) => {
-        if (typeof callback === "function") {
-          callback();
-        }
-        return 0 as any;
-      }) as any,
-    );
+      );
+    }) as any);
+    const setTimeoutSpy = spyOn(global, "setTimeout").mockImplementation(((
+      callback: any,
+    ) => {
+      if (typeof callback === "function") {
+        callback();
+      }
+      return 0 as any;
+    }) as any);
 
     try {
       await expect(setupGitHubToken()).rejects.toThrow(
