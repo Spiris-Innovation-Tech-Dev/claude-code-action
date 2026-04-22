@@ -3,13 +3,6 @@
 import * as core from "@actions/core";
 import { retryWithBackoff } from "../utils/retry";
 
-export class WorkflowValidationSkipError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "WorkflowValidationSkipError";
-  }
-}
-
 async function getOidcToken(): Promise<string> {
   try {
     const oidcToken = await core.getIDToken("claude-code-github-action");
@@ -91,21 +84,6 @@ async function exchangeForAppToken(
       message?: string;
     };
 
-    // Check for specific workflow validation error codes that should skip the action
-    const errorCode = responseJson.error?.details?.error_code;
-
-    if (errorCode === "workflow_not_found_on_default_branch") {
-      const message =
-        responseJson.message ??
-        responseJson.error?.message ??
-        "Workflow validation failed";
-      core.warning(`Skipping action due to workflow validation: ${message}`);
-      console.log(
-        "Action skipped due to workflow validation error. This is expected when adding Claude Code workflows to new repositories or on PRs with workflow changes. If you're seeing this, your workflow will begin working once you merge your PR.",
-      );
-      throw new WorkflowValidationSkipError(message);
-    }
-
     console.error(
       `App token exchange failed: ${response.status} ${response.statusText} - ${responseJson?.error?.message ?? "Unknown error"}`,
     );
@@ -141,11 +119,8 @@ export async function setupGitHubToken(): Promise<string> {
   const permissions = parseAdditionalPermissions();
 
   console.log("Exchanging OIDC token for app token...");
-  const appToken = await retryWithBackoff(
-    () => exchangeForAppToken(oidcToken, permissions),
-    {
-      shouldRetry: (error) => !(error instanceof WorkflowValidationSkipError),
-    },
+  const appToken = await retryWithBackoff(() =>
+    exchangeForAppToken(oidcToken, permissions),
   );
   console.log("App token successfully obtained");
   core.setSecret(appToken);

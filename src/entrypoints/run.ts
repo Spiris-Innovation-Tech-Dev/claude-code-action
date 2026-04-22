@@ -11,7 +11,7 @@ import { dirname } from "path";
 import { spawn } from "child_process";
 import { appendFile } from "fs/promises";
 import { existsSync, readFileSync } from "fs";
-import { setupGitHubToken, WorkflowValidationSkipError } from "../github/token";
+import { setupGitHubToken } from "../github/token";
 import { checkWritePermissions } from "../github/validation/permissions";
 import { createOctokit } from "../github/api/client";
 import type { Octokits } from "../github/api/client";
@@ -160,16 +160,7 @@ async function run() {
       `Auto-detected mode: ${modeName} for event: ${context.eventName}`,
     );
 
-    try {
-      githubToken = await setupGitHubToken();
-    } catch (error) {
-      if (error instanceof WorkflowValidationSkipError) {
-        core.setOutput("skipped_due_to_workflow_validation_mismatch", "true");
-        console.log("Exiting due to workflow validation skip");
-        return;
-      }
-      throw error;
-    }
+    githubToken = await setupGitHubToken();
 
     octokit = createOctokit(githubToken);
 
