@@ -171,12 +171,30 @@ export async function setupGitHubToken(): Promise<string> {
   const permissions = parseAdditionalPermissions();
 
   console.log("Exchanging OIDC token for app token...");
-  const appToken = await retryWithBackoff(
-    () => exchangeForAppToken(oidcToken, permissions),
-    {
-      shouldRetry: (error) => !(error instanceof WorkflowValidationSkipError),
-    },
-  );
+  let appToken: string;
+  try {
+    appToken = await retryWithBackoff(
+      () => exchangeForAppToken(oidcToken, permissions),
+      {
+        shouldRetry: (error) => !(error instanceof WorkflowValidationSkipError),
+      },
+    );
+  } catch (error) {
+    const defaultWorkflowToken = process.env.DEFAULT_WORKFLOW_TOKEN;
+    if (
+      !(error instanceof WorkflowValidationSkipError) ||
+      !defaultWorkflowToken
+    ) {
+      throw error;
+    }
+
+    core.warning(
+      "The Claude GitHub App rejected this workflow because it is not on the default branch. Falling back to the workflow GITHUB_TOKEN.",
+    );
+    core.setSecret(defaultWorkflowToken);
+    core.setOutput("used_default_workflow_token", "true");
+    return defaultWorkflowToken;
+  }
   console.log("App token successfully obtained");
   core.setSecret(appToken);
 
